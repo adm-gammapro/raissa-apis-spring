@@ -1,5 +1,10 @@
 package com.raissa.apis.service.alfin;
 
+import com.raissa.apis.domain.dto.request.payments.ConfirmaTransRequestDto;
+import com.raissa.apis.domain.dto.request.payments.ConsultaTransRequestDto;
+import com.raissa.apis.domain.dto.response.payments.ConfirmaTransGetResponseDto;
+import com.raissa.apis.domain.dto.response.payments.ConsultaTransGetResponseDto;
+
 import java.util.Map;
 
 public interface ALFINEmpresaService {
@@ -16,4 +21,10 @@ public interface ALFINEmpresaService {
                                     String numCuenta,
                                     String fechaInicio,
                                     String fechaFin);
+
+    ConsultaTransGetResponseDto consultaTransferencia(ConsultaTransRequestDto datos,
+                                                      String transactionId);
+
+    ConfirmaTransGetResponseDto confirmaTransferencia(ConfirmaTransRequestDto datos,
+                                                      String transactionId);
 }

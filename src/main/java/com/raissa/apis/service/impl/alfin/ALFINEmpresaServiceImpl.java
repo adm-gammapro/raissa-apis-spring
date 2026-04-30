@@ -5,13 +5,22 @@ import com.raissa.apis.domain.dto.MovimientosResponse;
 import com.raissa.apis.domain.dto.ProtectedResponse;
 import com.raissa.apis.domain.dto.SaldoResponse;
 import com.raissa.apis.domain.dto.TokenResponse;
+import com.raissa.apis.domain.dto.request.payments.ConfirmaTransRequestDto;
+import com.raissa.apis.domain.dto.request.payments.ConfirmaTransSendAlfinRequestDto;
+import com.raissa.apis.domain.dto.request.payments.ConsultaTransRequestDto;
+import com.raissa.apis.domain.dto.request.payments.ConsultaTransSendAlfinRequestDto;
+import com.raissa.apis.domain.dto.response.payments.BTErrorNegocioDto;
+import com.raissa.apis.domain.dto.response.payments.BtoutreqDto;
+import com.raissa.apis.domain.dto.response.payments.ConfirmaTransGetResponseDto;
+import com.raissa.apis.domain.dto.response.payments.ConsultaTransGetResponseDto;
+import com.raissa.apis.domain.dto.response.payments.ErroresNegocioDto;
 import com.raissa.apis.domain.entity.Params;
 import com.raissa.apis.domain.repository.ParamsRepository;
 import com.raissa.apis.exception.AlfinException;
 import com.raissa.apis.exception.EmptyResponseException;
 import com.raissa.apis.service.alfin.ALFINEmpresaService;
-import com.raissa.apis.util.Constantes;
 import com.raissa.apis.util.ResponseGeneric;
+import com.raissa.comun.util.Constante;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +43,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -70,16 +81,14 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
         try {
             TokenResult tokenResult = obtenerTokenAlfin();
 
-            log.info("Alfin token validado {}, ------------------------------------------------------------------------------", tokenResult);
-
             if (!tokenResult.success()) {
                 Map<String, Object> errorResult = ResponseGeneric.buildSuccessResponse(
                         transactionId,
                         tokenResult.userMessage(),
                         false
                 );
-                errorResult.put(Constantes.KEY_ERROR_CODE, tokenResult.errorCode());
-                errorResult.put(Constantes.KEY_TEC_MESSAGE, tokenResult.errorMessage());
+                errorResult.put(Constante.KEY_ERRORCODE_CODE, tokenResult.errorCode());
+                errorResult.put(Constante.KEY_TEC_MESSAGE, tokenResult.errorMessage());
                 return errorResult;
             }
 
@@ -99,8 +108,8 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
                     "Error interno del sistema. Contacte al administrador.",
                     false
             );
-            errorResult.put(Constantes.KEY_ERROR_CODE, "ALFIN_GENERIC_ERROR");
-            errorResult.put(Constantes.KEY_TEC_MESSAGE, e.getMessage());
+            errorResult.put(Constante.KEY_ERRORCODE_CODE, Constante.ALFIN_GENERIC_ERROR);
+            errorResult.put(Constante.KEY_TEC_MESSAGE, e.getMessage());
             return errorResult;
         }
     }
@@ -115,8 +124,8 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
             Map<String, Object> accounts = invocarSaldosAlfin(datos.get("tokenAlterno"), datos.get("sessionToken"), datos);
 
             result = ResponseGeneric.buildSuccessResponse(transactionId, "Datos de cuentas obtenidos exitosamente", true);
-            result.put(Constantes.KEY_DATA, accounts.get(Constantes.KEY_DATA));
-            result.put(Constantes.KEY_COUNT, accounts.get(Constantes.KEY_COUNT));
+            result.put(Constante.KEY_DATA, accounts.get(Constante.KEY_DATA));
+            result.put(Constante.KEY_COUNT, accounts.get(Constante.KEY_COUNT));
 
             return result;
         } catch (Exception e) {
@@ -127,8 +136,8 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
                     "Error interno del sistema. Contacte al administrador.",
                     false
             );
-            errorResult.put(Constantes.KEY_ERROR_CODE, "ALFIN_GENERIC_ERROR");
-            errorResult.put(Constantes.KEY_TEC_MESSAGE, e.getMessage());
+            errorResult.put(Constante.KEY_ERRORCODE_CODE, "ALFIN_GENERIC_ERROR");
+            errorResult.put(Constante.KEY_TEC_MESSAGE, e.getMessage());
             return errorResult;
         }
     }
@@ -148,8 +157,8 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
             List<Map<String, Object>> movimientos = invocarMovimientosAlfin(tokenAlterno, sessionToken, usuario, numCuenta, fechaInicio, fechaFin);
 
             result = ResponseGeneric.buildSuccessResponse(transactionId, "Movimientos obtenidos exitosamente", true);
-            result.put(Constantes.KEY_DATA, movimientos);
-            result.put(Constantes.KEY_COUNT, movimientos.size());
+            result.put(Constante.KEY_DATA, movimientos);
+            result.put(Constante.KEY_COUNT, movimientos.size());
             result.put("cuenta", numCuenta);
             result.put("fechaInicio", fechaInicio);
             result.put("fechaFin", fechaFin);
@@ -163,16 +172,16 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
                     "Error interno del sistema. Contacte al administrador.",
                     false
             );
-            errorResult.put(Constantes.KEY_ERROR_CODE, "ALFIN_GENERIC_ERROR");
-            errorResult.put(Constantes.KEY_TEC_MESSAGE, e.getMessage());
+            errorResult.put(Constante.KEY_ERRORCODE_CODE, "ALFIN_GENERIC_ERROR");
+            errorResult.put(Constante.KEY_TEC_MESSAGE, e.getMessage());
             return errorResult;
         }
     }
 
     private TokenResult obtenerTokenAlfin() {
         List<Params> paramsList = paramsRepository.findByProviderAndGrupo(
-                Constantes.PROVIDER_ALFIN,
-                Constantes.GRUPO_LOGIN
+                Constante.PROVIDER_ALFIN,
+                Constante.GRUPO_LOGIN
         );
 
         if (paramsList.isEmpty()) {
@@ -221,11 +230,59 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
         }
     }
 
+    public ConsultaTransGetResponseDto consultaTransferencia(ConsultaTransRequestDto datos,
+                                                             String transactionId) {
+        log.info("Iniciando proceso de consulta de transferencias de ALFIN: {}", transactionId);
+
+        try {
+            return invocarConsultaTransferenciaInmediataAlfin(datos.getTokenAlterno(),
+                    datos.getSessionToken(),
+                    datos);
+        } catch (AlfinException e) {
+            log.error("Error controlado al consultar transferencia inmediata ALFIN: {}", e.getMessage());
+            ConsultaTransGetResponseDto resp = new ConsultaTransGetResponseDto();
+            resp.setErroresNegocio(cargarDatosError("Error controlado al consultar transferencia inmediata ALFIN: " + e.getMessage()));
+            resp.setBtoutreq(cargarEstadoError("ABServices.ConsultarTransferenciaInmediataBaaS"));
+            return resp;
+        } catch (Exception e) {
+            log.error("Error inesperado al consultar transferencia inmediata ALFIN: {}", e.getMessage());
+            ConsultaTransGetResponseDto resp = new ConsultaTransGetResponseDto();
+            resp.setErroresNegocio(cargarDatosError("Error inesperado al consultar transferencia inmediata ALFIN: " + e.getMessage()));
+            resp.setBtoutreq(cargarEstadoError("ABServices.ConsultarTransferenciaInmediataBaaS"));
+            return resp;
+        }
+    }
+
+    public ConfirmaTransGetResponseDto confirmaTransferencia(ConfirmaTransRequestDto datos,
+                                                             String transactionId) {
+        log.info("Iniciando proceso de confirmacion de transferencias de ALFIN: {}", transactionId);
+
+        try {
+            return invocarConfirmacionTransferenciaInmediataAlfin(datos.getTokenAlterno(),
+                    datos.getSessionToken(),
+                    datos);
+        } catch (AlfinException e) {
+            log.error("Error controlado al confirmar transferencia inmediata ALFIN: {}", e.getMessage());
+            ConfirmaTransGetResponseDto resp = new ConfirmaTransGetResponseDto();
+            resp.setErroresNegocio(cargarDatosError("Error controlado al confirmar transferencia inmediata ALFIN: " + e.getMessage()));
+            resp.setBtoutreq(cargarEstadoError("ABServices.ConfirmarTransferenciaInmediataBaaSP2"));
+
+            return resp;
+        } catch (Exception e) {
+            log.error("Error inesperado al confirmar transferencia inmediata ALFIN: {}", e.getMessage());
+            ConfirmaTransGetResponseDto resp = new ConfirmaTransGetResponseDto();
+            resp.setErroresNegocio(cargarDatosError("Error inesperado al confirmar transferencia inmediata ALFIN: {}" + e.getMessage()));
+            resp.setBtoutreq(cargarEstadoError("ABServices.ConfirmarTransferenciaInmediataBaaSP2"));
+
+            return resp;
+        }
+    }
+
     private String invocarAuthorizationAlfin(String accessToken,
                                              Map<String, String> credentials) {
         List<Params> paramsList = paramsRepository.findByProviderAndGrupo(
-                Constantes.PROVIDER_ALFIN,
-                Constantes.GRUPO_CONSULTAS
+                Constante.PROVIDER_ALFIN,
+                Constante.GRUPO_CONSULTAS
         );
 
         HttpHeaders headers = new HttpHeaders();
@@ -293,8 +350,8 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
 
     private Map<String, Object> invocarSaldosAlfin(String tokenAlterno, String sessionToken, Map<String, String> datos) {
         List<Params> paramsList = paramsRepository.findByProviderAndGrupo(
-                Constantes.PROVIDER_ALFIN,
-                Constantes.GRUPO_CONSULTAS
+                Constante.PROVIDER_ALFIN,
+                Constante.GRUPO_CONSULTAS
         );
 
         HttpHeaders headers = new HttpHeaders();
@@ -349,11 +406,11 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
             String moneda = normalizarMoneda(body.getMoneda());
 
             Map<String, Object> cuentaMap = new HashMap<>();
-            cuentaMap.put(Constantes.KEY_NUMERO_CUENTA, datos.getOrDefault("numeroCuenta", null));
-            cuentaMap.put(Constantes.KEY_TIPO_CUENTA, "Corriente");
-            cuentaMap.put(Constantes.KEY_SALDO_DISP, saldo);
-            cuentaMap.put(Constantes.KEY_SALDO_CONT, saldo);
-            cuentaMap.put(Constantes.KEY_MONEDA, moneda);
+            cuentaMap.put(Constante.KEY_NUMERO_CUENTA, datos.getOrDefault("numeroCuenta", null));
+            cuentaMap.put(Constante.KEY_TIPO_CUENTA, "Corriente");
+            cuentaMap.put(Constante.KEY_SALDO_DISP, saldo);
+            cuentaMap.put(Constante.KEY_SALDO_CONT, saldo);
+            cuentaMap.put(Constante.KEY_MONEDA, moneda);
 
             Map<String, Object> resultado = new HashMap<>();
             resultado.put("data", Collections.singletonList(cuentaMap));
@@ -379,8 +436,8 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
                                                               String fechaInicio,
                                                               String fechaFin) {
         List<Params> paramsList = paramsRepository.findByProviderAndGrupo(
-                Constantes.PROVIDER_ALFIN,
-                Constantes.GRUPO_CONSULTAS
+                Constante.PROVIDER_ALFIN,
+                Constante.GRUPO_CONSULTAS
         );
 
         HttpHeaders headers = new HttpHeaders();
@@ -452,12 +509,12 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
         Map<String, Object> map = new HashMap<>();
 
         String fechaFormateada = formatearFecha(movimiento.getFecha());
-        map.put(Constantes.KEY_FECHA, fechaFormateada);
-        map.put(Constantes.KEY_FECHA_VALOR, fechaFormateada);
+        map.put(Constante.KEY_FECHA, fechaFormateada);
+        map.put(Constante.KEY_FECHA_VALOR, fechaFormateada);
 
-        map.put(Constantes.KEY_OPERACION,
+        map.put(Constante.KEY_OPERACION,
                 Optional.ofNullable(movimiento.getMovimientoUId()).orElse(""));
-        map.put(Constantes.KEY_DESCRIPCION,
+        map.put(Constante.KEY_DESCRIPCION,
                 Optional.ofNullable(movimiento.getConcepto()).orElse("").replaceAll("\\s+", " ").trim());
 
         double monto = Optional.ofNullable(movimiento.getImporte()).orElse(0.0);
@@ -470,14 +527,175 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
         }
         map.put("monto", monto);
 
-        map.put(Constantes.KEY_REFERENCIA,
+        map.put(Constante.KEY_REFERENCIA,
                 Optional.ofNullable(movimiento.getReferencia()).orElse(""));
         map.put("saldo", "0.00");
 
         String moneda = normalizarMoneda(movimiento.getMoneda());
-        map.put(Constantes.KEY_MONEDA, moneda);
+        map.put(Constante.KEY_MONEDA, moneda);
 
         return map;
+    }
+
+    private ConsultaTransGetResponseDto invocarConsultaTransferenciaInmediataAlfin(String tokenAlterno,
+                                                                                   String sessionToken,
+                                                                                   ConsultaTransRequestDto datos) {
+        try {
+            List<Params> paramsList = paramsRepository.findByProviderAndGrupo(
+                    Constante.PROVIDER_ALFIN,
+                    Constante.GRUPO_CONSULTAS
+            );
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(tokenAlterno);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            String usuario = datos.getClienteBaaS();
+            if (StringUtils.hasText(usuario)) {
+                headers.set("Usuario", usuario);
+            }
+
+            headers.set("token", sessionToken);
+
+            paramsList.stream()
+                    .filter(param -> !"alfinhash".equalsIgnoreCase(param.getCodigo()))
+                    .forEach(param -> headers.set(param.getCodigo(), param.getValor()));
+
+            ConsultaTransSendAlfinRequestDto payload = cargarSendDtoAlfin(datos);
+
+            String payloadJson= objectMapper.writeValueAsString(payload);
+
+            String alfinHashSecret = paramsList.stream()
+                    .filter(param -> "alfinhash".equalsIgnoreCase(param.getCodigo()))
+                    .map(Params::getValor)
+                    .findFirst()
+                    .orElseThrow(() -> new AlfinException("Clave 'alfinhash' no configurada en parámetros ALFIN"));
+
+            String alfinHash = hmacSha256Hex(payloadJson, alfinHashSecret);
+            headers.set("alfinhash", alfinHash);
+
+            String url = String.format("%s/api/ABServices/v1/ConsultarTransferenciaInmediataBaaSv2", alfinBaseUrl);
+
+            HttpEntity<ConsultaTransSendAlfinRequestDto> request = new HttpEntity<>(payload, headers);
+
+            ResponseEntity<ConsultaTransGetResponseDto> response = restTemplate.postForEntity(url,
+                    request,
+                    ConsultaTransGetResponseDto.class);
+
+            ConsultaTransGetResponseDto body = response.getBody();
+            if (body == null) {
+                throw new AlfinException("Respuesta vacía del servicio de consulta de transferencias inmediatas ALFIN");
+            }
+
+            log.debug("Respuesta exitosa de consulta transferencia inmediata ALFIN: {}", body);
+            return body;
+        } catch (AlfinException e) {
+            log.error("Error controlado al invocar servicio protegido ALFIN: {}", e.getMessage());
+            throw new AlfinException("Error controlado al invocar servicio protegido ALFIN: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Error inesperado al invocar servicio protegido ALFIN: {}", e.getMessage());
+            throw new AlfinException("Error inesperado al invocar servicio protegido ALFIN: " + e.getMessage());
+        }
+    }
+
+    private ConfirmaTransGetResponseDto invocarConfirmacionTransferenciaInmediataAlfin(String tokenAlterno,
+                                                                                       String sessionToken,
+                                                                                       ConfirmaTransRequestDto datos) {
+        try {
+            List<Params> paramsList = paramsRepository.findByProviderAndGrupo(
+                    Constante.PROVIDER_ALFIN,
+                    Constante.GRUPO_CONSULTAS
+            );
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(tokenAlterno);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            String usuario = datos.getClienteBaaS();
+            if (StringUtils.hasText(usuario)) {
+                headers.set("Usuario", usuario);
+            }
+
+            headers.set("token", sessionToken);
+
+            paramsList.stream()
+                    .filter(param -> !"alfinhash".equalsIgnoreCase(param.getCodigo()))
+                    .forEach(param -> headers.set(param.getCodigo(), param.getValor()));
+
+            ConfirmaTransSendAlfinRequestDto payload = cargarSendDtoAlfin(datos);
+
+            String payloadJson= objectMapper.writeValueAsString(payload);
+
+            String alfinHashSecret = paramsList.stream()
+                    .filter(param -> "alfinhash".equalsIgnoreCase(param.getCodigo()))
+                    .map(Params::getValor)
+                    .findFirst()
+                    .orElseThrow(() -> new AlfinException("Clave 'alfinhash' no configurada en parámetros ALFIN"));
+
+            String alfinHash = hmacSha256Hex(payloadJson, alfinHashSecret);
+            headers.set("alfinhash", alfinHash);
+
+            String url = String.format("%s/api/ABServices/v1/ConfirmarTransferenciaInmediataBaaS", alfinBaseUrl);
+
+            HttpEntity<ConfirmaTransSendAlfinRequestDto> request = new HttpEntity<>(payload, headers);
+
+
+            ResponseEntity<ConfirmaTransGetResponseDto> response = restTemplate.postForEntity(url,
+                    request,
+                    ConfirmaTransGetResponseDto.class);
+
+            ConfirmaTransGetResponseDto body = response.getBody();
+
+            if (body == null) {
+                throw new AlfinException("Respuesta vacía del servicio de confirmacion de transferencias inmediatas ALFIN");
+            }
+
+            log.info("Respuesta exitosa de confirmacion transferencia inmediata ALFIN: {}", body);
+            return body;
+        } catch (AlfinException e) {
+            log.error("Error controlado al invocar servicio de confirmacion protegido ALFIN: {}", e.getMessage());
+            throw new AlfinException("Error controlado al invocar servicio protegido ALFIN: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Error inesperado al invocar servicio de confirmacion protegido ALFIN: {}", e.getMessage());
+            throw new AlfinException("Error inesperado al invocar servicio protegido ALFIN: " + e.getMessage());
+        }
+    }
+
+    private ConsultaTransSendAlfinRequestDto cargarSendDtoAlfin(ConsultaTransRequestDto datos){
+        ConsultaTransSendAlfinRequestDto payload = new ConsultaTransSendAlfinRequestDto();
+        payload.setClienteBaaS(datos.getClienteBaaS());
+        payload.setCuentaBaaS(datos.getCuentaBaaS());
+        payload.setMoneda(Integer.parseInt(datos.getMoneda()));
+        payload.setImporte(datos.getImporte().doubleValue());
+        payload.setCodigoTransaccion(Integer.parseInt(datos.getCodigoTransaccion()));
+        payload.setBancoDestino(Integer.parseInt(datos.getBancoDestino()));
+        if (datos.getSucursalDestino() == null || datos.getSucursalDestino().isEmpty()) {
+            payload.setSucursalDestino(0);
+        } else {
+            payload.setSucursalDestino(Integer.parseInt(datos.getSucursalDestino()));
+        }
+        payload.setTarjeta(datos.getTarjeta());
+        payload.setCciBeneficiario(datos.getCciBeneficiario());
+        payload.setMismoTitular(datos.getMismoTitular());
+        payload.setTipoDocumentoOrdenante(Integer.parseInt(datos.getTipoDocumentoOrdenante()));
+        payload.setDocumentoOrdenante(datos.getDocumentoOrdenante());
+        payload.setNombreOrdenante(datos.getNombreOrdenante());
+        payload.setApellidoPaternoOrdenante(datos.getApellidoPaternoOrdenante());
+        payload.setApellidoMaternoOrdenante(datos.getApellidoMaternoOrdenante());
+
+        return payload;
+    }
+
+    private ConfirmaTransSendAlfinRequestDto cargarSendDtoAlfin(ConfirmaTransRequestDto datos){
+        ConfirmaTransSendAlfinRequestDto payload = new ConfirmaTransSendAlfinRequestDto();
+        payload.setClienteBaaS(datos.getClienteBaaS());
+        payload.setCuentaBaaS(datos.getCuentaBaaS());
+        payload.setMoneda(Integer.parseInt(datos.getMoneda()));
+        payload.setImporte(datos.getImporte().doubleValue());
+        payload.setTransferenciaId(datos.getTransferenciaId());
+        payload.setMpe001idl(Integer.parseInt(datos.getMpe001idl()));
+
+        return payload;
     }
 
     private String normalizarMoneda(String moneda) {
@@ -505,6 +723,34 @@ public class ALFINEmpresaServiceImpl implements ALFINEmpresaService {
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             throw new IllegalStateException("No fue posible calcular el alfinhash", e);
         }
+    }
+
+    private ErroresNegocioDto cargarDatosError(String mensajeError){
+        BTErrorNegocioDto errorNegocioDto = new BTErrorNegocioDto();
+        errorNegocioDto.setCodigo(1);
+        errorNegocioDto.setDescripcion(mensajeError);
+        errorNegocioDto.setSeveridad("E");
+
+        ErroresNegocioDto errores = new ErroresNegocioDto();
+        errores.setBtErrorNegocio(Collections.singletonList(errorNegocioDto));
+
+        return errores;
+    }
+
+    private BtoutreqDto cargarEstadoError(String servicio){
+        ZoneId zone = ZoneId.of("America/Lima");
+        LocalDateTime now = LocalDateTime.now(zone);
+
+        BtoutreqDto btoutreqDto = new BtoutreqDto();
+        btoutreqDto.setCanal("ABSERVICES");
+        btoutreqDto.setServicio(servicio);
+        btoutreqDto.setFecha(now.toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE));
+        btoutreqDto.setHora(now.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
+        btoutreqDto.setRequerimiento(Constante.CODIGO_ERROR_1);
+        btoutreqDto.setNumero(0L);
+        btoutreqDto.setEstado(Constante.ESTADO_ALFIN_ERROR);
+
+        return btoutreqDto;
     }
 
     private record TokenResult(boolean success,

@@ -5,8 +5,8 @@ import com.raissa.apis.domain.entity.Session;
 import com.raissa.apis.service.commons.AuthService;
 import com.raissa.apis.service.commons.LoggingService;
 import com.raissa.apis.service.commons.ValidationService;
-import com.raissa.apis.util.Constantes;
 import com.raissa.apis.util.ResponseGeneric;
+import com.raissa.comun.util.Constante;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,14 +56,14 @@ public class AuthController {
             String userAgent = request.getHeader("User-Agent");
             Session session = authService.createSession(account, token, transactionId, clientIp, userAgent);
 
-            loggingService.logCompleteRequest(session, clientIp, Constantes.TIPO_REQUEST_LOGIN, Constantes.RESP_REQUEST_EXITO, "0",userAgent, 0);
+            loggingService.logCompleteRequest(session, clientIp, Constante.TIPO_REQUEST_LOGIN, Constante.RESP_REQUEST_EXITO, "0",userAgent, 0);
 
             Map<String, Object> response = ResponseGeneric.buildSuccessResponse(transactionId, "Autenticación exitosa", true);
 
-            response.put(Constantes.KEY_TOKEN, token);
-            response.put(Constantes.KEY_FUL_NAME, account.getFullName());
-            response.put(Constantes.KEY_DOCUMENT_NUMBER, account.getDocumentNumber());
-            response.put(Constantes.KEY_EXPIRES_IN, 3600);
+            response.put(Constante.KEY_TOKEN, token);
+            response.put(Constante.KEY_FUL_NAME, account.getFullName());
+            response.put(Constante.KEY_DOCUMENT_NUMBER, account.getDocumentNumber());
+            response.put(Constante.KEY_EXPIRES_IN, 3600);
 
             log.info("Autenticación exitosa para: {}, transactionId: {}", account.getFullName(), transactionId);
 
@@ -98,7 +98,7 @@ public class AuthController {
             String clientIp = ResponseGeneric.getClientIp(request);
             String userAgent = request.getHeader("User-Agent");
 
-            loggingService.logCompleteRequest(session, clientIp, Constantes.TIPO_REQUEST_LOGOUT, Constantes.RESP_REQUEST_EXITO, "0",userAgent, 0);
+            loggingService.logCompleteRequest(session, clientIp, Constante.TIPO_REQUEST_LOGOUT, Constante.RESP_REQUEST_EXITO, "0",userAgent, 0);
 
             Map<String, Object> response = ResponseGeneric.buildSuccessResponse(transactionId, "Sesión cerrada exitosamente", true);
 
@@ -130,12 +130,12 @@ public class AuthController {
             Map<String, Object> tokenData = authService.decodeToken(token);
 
             Map<String, Object> response = ResponseGeneric.buildSuccessResponse("-", "Token válido", true);
-            response.put(Constantes.KEY_VALID, true);
-            response.put(Constantes.KEY_FUL_NAME, tokenData.get("fullName"));
-            response.put(Constantes.KEY_DOCUMENT_NUMBER, tokenData.get("documentNumber"));
-            response.put(Constantes.KEY_TRANSACTION_ID, tokenData.get("transactionId"));
+            response.put(Constante.KEY_VALID, true);
+            response.put(Constante.KEY_FUL_NAME, tokenData.get(Constante.KEY_FULLNAME));
+            response.put(Constante.KEY_DOCUMENT_NUMBER, tokenData.get(Constante.KEY_DOCUMENTNUMBER));
+            response.put(Constante.KEY_TRANSACTION_ID, tokenData.get(Constante.KEY_TRANSACTION_ID));
 
-            log.info("Token validado exitosamente para: {}", tokenData.get("fullName"));
+            log.info("Token validado exitosamente para: {}", tokenData.get(Constante.KEY_FULLNAME));
 
             return ResponseEntity.ok(response);
 
@@ -143,7 +143,7 @@ public class AuthController {
             log.error("Error validando token: {}", e.getMessage());
 
             Map<String, Object> errorResponse = ResponseGeneric.buildSuccessResponse("-", "Token invalido o expirado", false);
-            errorResponse.put(Constantes.KEY_VALID, false);
+            errorResponse.put(Constante.KEY_VALID, false);
 
             return ResponseEntity.badRequest().body(errorResponse);
         }
@@ -165,12 +165,12 @@ public class AuthController {
 
             Map<String, Object> response = ResponseGeneric.buildSuccessResponse(transactionId, "Información de sesión obtenida", true);
             response.put("created_at", session.getCreatedAt());
-            response.put(Constantes.KEY_EXPIRES_IN, session.getExpires());
+            response.put(Constante.KEY_EXPIRES_IN, session.getExpires());
             response.put("active", session.isActive());
             response.put("client_ip", session.getConsumerIp());
             response.put("user_agent", session.getConsumerUseragent());
             response.put("account_id", session.getAccount().getId());
-            response.put(Constantes.KEY_FUL_NAME, session.getAccount().getFullName());
+            response.put(Constante.KEY_FUL_NAME, session.getAccount().getFullName());
 
             log.info("Información de sesión obtenida, transactionId: {}", transactionId);
 

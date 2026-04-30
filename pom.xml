@@ -68,6 +68,11 @@
 			<artifactId>commons-lang3</artifactId>
 			<version>3.18.0</version>
 		</dependency>
+		<dependency>
+			<groupId>com.raissa</groupId>
+			<artifactId>raissa-comun-spring</artifactId>
+			<version>0.0.1</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.projectlombok</groupId>
@@ -95,6 +100,14 @@
 			<groupId>org.apache.xmlgraphics</groupId>
 			<artifactId>batik-parser</artifactId>
 			<version>1.19</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
 		</dependency>
 	</dependencies>
 

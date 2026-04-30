@@ -1,5 +1,6 @@
 package com.raissa.apis.util;
 
+import com.raissa.comun.util.Constante;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.HashMap;
@@ -18,9 +19,9 @@ public abstract class ResponseGeneric {
      */
     public static Map<String, Object> buildSuccessResponse(String transactionId, String message, boolean success) {
         Map<String, Object> response = new HashMap<>();
-        response.put(Constantes.KEY_SUCCESS, success);
-        response.put(Constantes.KEY_MESSAGE, message);
-        response.put(Constantes.KEY_TRANSACTION_ID, transactionId);
+        response.put(Constante.KEY_SUCCESS_CODE, success);
+        response.put(Constante.KEY_MESSAGE, message);
+        response.put(Constante.KEY_TRANSACTION_ID, transactionId);
         return response;
     }
 
